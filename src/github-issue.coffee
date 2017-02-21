@@ -25,15 +25,18 @@ module.exports = (robot) ->
     query = querystring.parse url.parse(req.url).query
     opts =
       only_mentioned: query["only-mentioned"]
-    parts = parseBody req.body
+      open: query["open"]
+      close: query["close"]
+      comment: query["comment"]
+    parts = parseBody req.body, opts
     message = lib.buildMessage parts, opts
     robot.send {room: query.room}, message if message
     res.end ""
 
-parseBody = (data) ->
+parseBody = (data, opts) ->
   parts = null
   # when issue is opened
-  if ['opened', 'reopened'].indexOf(data.action) > -1 and data.issue
+  if ['opened', 'reopened'].indexOf(data.action) > -1 and data.issue and opts.open
     parts =
       repository: data.repository.full_name
       action: "Issue opened"
@@ -43,7 +46,7 @@ parseBody = (data) ->
       url: data.issue.html_url
       mentions: lib.extractMentions data.issue.body
   # when issue is closed
-  else if data.action is 'closed' and data.issue
+  else if data.action is 'closed' and data.issue and opts.close
     parts =
       repository: data.repository.full_name
       action: "Issue closed"
@@ -53,7 +56,7 @@ parseBody = (data) ->
       url: data.issue.html_url
       mentions: lib.extractMentions data.issue.body
   # comments on issues and those on pull requests are same except the latter has data.issue.pull_request
-  else if data.action is 'created' and data.issue and not data.issue.pull_request
+  else if data.action is 'created' and data.issue and not data.issue.pull_request and opts.comment
     parts =
       repository: data.repository.full_name
       action: "New comment on issue"

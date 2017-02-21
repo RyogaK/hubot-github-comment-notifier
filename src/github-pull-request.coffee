@@ -27,15 +27,18 @@ module.exports = (robot) ->
       only_mentioned: query["only-mentioned"]
       random_mention: +query["random-mention"]
       mention_team: query["mention-team"]
-    parts = parseBody req.body
+      open: query["open"]
+      close: query["close"]
+      comment: query["comment"]
+    parts = parseBody req.body, opts
     message = lib.buildMessage parts, opts
     robot.send {room: query.room}, message if message
     res.end ""
 
-parseBody = (data) ->
+parseBody = (data, opts) ->
   parts = null
   # when pull request is opened
-  if ['opened', 'reopened'].indexOf(data.action) > -1 and data.pull_request
+  if ['opened', 'reopened'].indexOf(data.action) > -1 and data.pull_request and opts.open
     parts =
       repository: data.repository.full_name
       action: "Pull request opened"
@@ -46,7 +49,7 @@ parseBody = (data) ->
       mentions: lib.extractMentions data.pull_request.body
       random: true
   # when pull request is closed
-  else if data.action is 'closed' and data.pull_request
+  else if data.action is 'closed' and data.pull_request and opts.close
     parts =
       repository: data.repository.full_name
       action: "Pull request closed"
@@ -56,7 +59,7 @@ parseBody = (data) ->
       url: data.pull_request.html_url
       mentions: lib.extractMentions data.pull_request.body
   # when review comment is added to pull request
-  else if data.action is 'created' and data.pull_request
+  else if data.action is 'created' and data.pull_request and opts.comment
     parts =
       repository: data.repository.full_name
       action: "New comment on pull request"
@@ -67,7 +70,7 @@ parseBody = (data) ->
       body: data.comment.body
       mentions: lib.extractMentions data.comment.body
   # comments on issues and those on pull requests are same except the latter has data.issue.pull_request
-  else if data.action is 'created' and data.issue?.pull_request
+  else if data.action is 'created' and data.issue?.pull_request and opts.comment
     parts =
       repository: data.repository.full_name
       action: "New comment on pull request"
